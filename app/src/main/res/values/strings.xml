@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Silent Phone Detector</string>
+    <string name="dashboard_title">Today\'s Activity</string>
+    <string name="privacy_score">Privacy Risk Score</string>
+    <string name="summary_title">Summary</string>
+</resources>
