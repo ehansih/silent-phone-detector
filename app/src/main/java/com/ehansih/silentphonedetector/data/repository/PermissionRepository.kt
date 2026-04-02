@@ -8,6 +8,10 @@ import android.content.pm.PackageManager
 import android.os.Build
 import com.ehansih.silentphonedetector.data.db.AppDatabase
 import com.ehansih.silentphonedetector.data.db.PermissionEvent
+import com.ehansih.silentphonedetector.data.scanner.ImsiAlert
+import com.ehansih.silentphonedetector.data.scanner.ImsiCatcherScanner
+import com.ehansih.silentphonedetector.data.scanner.NetworkAnomaly
+import com.ehansih.silentphonedetector.data.scanner.NetworkMonitorScanner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -18,6 +22,8 @@ data class ScanResult(
     val locationApps: Int,
     val backgroundApps: Int,
     val networkAnomalies: Int,
+    val networkSuspiciousApps: List<NetworkAnomaly>,
+    val imsiAlert: ImsiAlert?,
     val events: List<PermissionEvent>,
     val usageAccessGranted: Boolean
 )
@@ -28,6 +34,9 @@ class PermissionRepository(private val context: Context) {
     private val dao = db.permissionEventDao()
 
     private val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+
+    private val networkScanner = NetworkMonitorScanner(context)
+    private val imsiScanner = ImsiCatcherScanner(context)
 
     private val OPS = listOf(
         Triple("Microphone", AppOpsManager.OPSTR_RECORD_AUDIO,  "android.permission.RECORD_AUDIO"),
@@ -42,10 +51,7 @@ class PermissionRepository(private val context: Context) {
         val now = System.currentTimeMillis()
 
         val usageGranted = isUsageAccessGranted()
-
-        // Get user-installed + updated system packages only
         val packages = getAllUserPackages(pm)
-
         val events = mutableListOf<PermissionEvent>()
 
         for (pkg in packages) {
@@ -63,9 +69,7 @@ class PermissionRepository(private val context: Context) {
                     }
                     if (mode != AppOpsManager.MODE_ALLOWED) continue
 
-                    // Detect background access via UsageStats if available
                     val isBackground = usageGranted && isAppInBackground(packageName, now)
-
                     val risk = when {
                         isBackground && permType in listOf("Microphone", "Camera") -> 35
                         isBackground -> 20
@@ -85,16 +89,22 @@ class PermissionRepository(private val context: Context) {
             }
         }
 
-        // Persist to Room (replace previous scan)
+        // Network and IMSI scans run in parallel with permission scan
+        val networkAnomalies = networkScanner.scan()
+        val imsiAlert = imsiScanner.scan()
+
+        // Persist to Room
         dao.clear()
         if (events.isNotEmpty()) dao.insertAll(events)
 
         val micApps    = events.count { it.permissionType == "Microphone" }
         val locApps    = events.count { it.permissionType == "Location" }
         val bgApps     = events.count { it.isBackground }
+        val netCount   = networkAnomalies.size
+        val imsiBonus  = if (imsiAlert?.detected == true) 20 else 0
 
-        // Risk score: weighted sum capped at 100
-        val rawRisk = (bgApps * 20 + micApps * 10 + locApps * 5 + events.size * 2).coerceAtMost(100)
+        val rawRisk = (bgApps * 20 + micApps * 10 + locApps * 5 + events.size * 2 + netCount * 8 + imsiBonus)
+            .coerceAtMost(100)
 
         val label = when {
             rawRisk >= 70 -> "High risk — background sensor access detected. Review apps immediately."
@@ -104,14 +114,16 @@ class PermissionRepository(private val context: Context) {
         }
 
         ScanResult(
-            riskScore         = rawRisk,
-            riskLabel         = label,
-            microphoneApps    = micApps,
-            locationApps      = locApps,
-            backgroundApps    = bgApps,
-            networkAnomalies  = 0,
-            events            = events.sortedByDescending { it.riskScore }.take(20),
-            usageAccessGranted = usageGranted
+            riskScore             = rawRisk,
+            riskLabel             = label,
+            microphoneApps        = micApps,
+            locationApps          = locApps,
+            backgroundApps        = bgApps,
+            networkAnomalies      = netCount,
+            networkSuspiciousApps = networkAnomalies,
+            imsiAlert             = imsiAlert,
+            events                = events.sortedByDescending { it.riskScore }.take(20),
+            usageAccessGranted    = usageGranted
         )
     }
 
