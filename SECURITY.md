@@ -4,21 +4,25 @@
 
 | Version | Supported |
 |---------|-----------|
-| 1.1.x   | Yes       |
-| 1.0.x   | No        |
+| latest  | ✅        |
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in this project, please report it privately:
+If you discover a security vulnerability, **do not open a public issue**.
 
-- **Email:** vardhan.chauhan@icloud.com
-- **Do not** open a public GitHub issue for security vulnerabilities.
+Please report it via email: **ehansih@protonmail.com** (or GitHub private vulnerability reporting).
 
-You will receive a response within 48 hours. If confirmed, a patch will be released as soon as possible.
+Include:
+- Description of the vulnerability
+- Steps to reproduce
+- Potential impact
+- Suggested fix (if any)
 
-## Security Features in This App
+You will receive a response within **48 hours**. We take all reports seriously and will credit researchers who responsibly disclose issues.
 
-- All permission scanning is read-only — no data is modified on your device.
-- Password breach checks use the HIBP k-anonymity API: only 5 characters of a SHA-1 hash are transmitted. The full password never leaves your device.
-- No analytics, telemetry, or tracking of any kind.
-- No data is sent to any server except the HIBP API (breach check tab, user-initiated only).
+## Security Best Practices for Users
+
+- Never commit `.env` files or API keys
+- Always use environment variables for secrets
+- Keep dependencies updated (Dependabot is enabled on this repo)
+
