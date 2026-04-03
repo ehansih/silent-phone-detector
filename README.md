@@ -1,3 +1,15 @@
+<div align="center">
+
+# 🔍 Silent Phone Detector
+
+Android app that detects silent/background sensor access by installed apps — privacy protection tool.
+
+![Android](https://img.shields.io/badge/Android-green?logo=android) ![Security](https://img.shields.io/badge/Security-Privacy-red) ![Last Commit](https://img.shields.io/github/last-commit/ehansih/silent-phone-detector) ![Stars](https://img.shields.io/github/stars/ehansih/silent-phone-detector?style=social)
+
+</div>
+
+---
+
 # Silent Phone Detector
 
 Behavior-based visibility for sensitive Android permissions. This repo is the initial MVP scaffold with a working Compose UI that mirrors the concept note and provides a clean foundation for the monitoring engine.
